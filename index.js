@@ -1,7 +1,8 @@
 const request = require('request');
 const cheerio = require('cheerio');
 
-const url = 'https://tw.stock.yahoo.com/d/s/company_1101.html';
+const STOCK_URl = 'https://tw.stock.yahoo.com/d/s/company_1101.html';
+const INDUSTRY_URL = 'https://tw.stock.yahoo.com/h/kimosel.php?tse=1&cat=%E6%B0%B4%E6%B3%A5&form=menu&form_id=stock_id&form_name=stock_name&domain=0';
 const key = ['營業毛利率', '營業利益率', '稅前淨利率', '資產報酬率', '股東權益報酬率']
 function getStockInfo(url, callback) {
 	request(url, function(err, res, body) {
@@ -33,4 +34,28 @@ function getStockInfo(url, callback) {
 	})
 }
 
-getStockInfo(url);
+async function getIndustryLink(url) {
+	const links = [];
+
+	await request(url, function(err, res, body) {
+		const $ = cheerio.load(body)
+		const tables = $('table')
+		const NO_USE_INDEX = [13, 30, 32]
+		const industryTable = tables.eq(4).children('tbody').children('tr').children('td')
+		$(industryTable).each(function(index, elem) {
+			const link = $(this).find('a').attr('href')
+			if(link) {
+				if(!NO_USE_INDEX.includes(index)) {
+					links.push(link)
+				}
+			}
+		})
+		console.log(links)
+
+	})
+	await console.log(links)
+	// return links;
+}
+
+// getStockInfo(STOCK_URl);
+getIndustryLink(INDUSTRY_URL)
