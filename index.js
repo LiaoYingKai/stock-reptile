@@ -34,7 +34,7 @@ function getStockInfo(url, callback) {
 	})
 }
 
-function getIndustryLink(url) {
+function getIndustrySuffixLinks(url) {
 	return new Promise(function(resolve, reject){
 		request(url, function(err, res, body) {
 			const links = [];
@@ -56,9 +56,29 @@ function getIndustryLink(url) {
 	})
 }
 
+function getIndustryLinks(industryLinks){
+	return new Promise(function(resolve, reject) {
+		const PREFIX_URL = 'https://tw.stock.yahoo.com'
+		const links = industryLinks.map(link => `${PREFIX_URL}${link}`)
+		resolve(links)
+	})
+}
+
+function getIndustry(url) {
+	request(url, function(err, res, body){
+		const $ = cheerio.load(body)
+		const tables = $('table')
+		$(tables).each(index,elem) {
+			const content = $(this)
+			console.log(content)
+		}
+	})
+}
 
 // getStockInfo(STOCK_URl);
-getIndustryLink(INDUSTRY_URL)
-	.then(value => {
-		console.log('test',value)
-	})
+// getIndustrySuffixLinks(INDUSTRY_URL)
+// 	.then(value => getIndustryLinks(value))
+// 	.then(value => {
+// 		console.log('test2', value)
+// 	})
+getIndustry()
