@@ -34,28 +34,31 @@ function getStockInfo(url, callback) {
 	})
 }
 
-async function getIndustryLink(url) {
-	const links = [];
-
-	await request(url, function(err, res, body) {
-		const $ = cheerio.load(body)
-		const tables = $('table')
-		const NO_USE_INDEX = [13, 30, 32]
-		const industryTable = tables.eq(4).children('tbody').children('tr').children('td')
-		$(industryTable).each(function(index, elem) {
-			const link = $(this).find('a').attr('href')
-			if(link) {
-				if(!NO_USE_INDEX.includes(index)) {
-					links.push(link)
+function getIndustryLink(url) {
+	return new Promise(function(resolve, reject){
+		request(url, function(err, res, body) {
+			const links = [];
+	
+			const $ = cheerio.load(body)
+			const tables = $('table')
+			const NO_USE_INDEX = [13, 30, 32]
+			const industryTable = tables.eq(4).children('tbody').children('tr').children('td')
+			$(industryTable).each(function(index, elem) {
+				const link = $(this).find('a').attr('href')
+				if(link) {
+					if(!NO_USE_INDEX.includes(index)) {
+						links.push(link)
+					}
 				}
-			}
+			})
+			resolve(links)
 		})
-		console.log(links)
-
 	})
-	await console.log(links)
-	// return links;
 }
+
 
 // getStockInfo(STOCK_URl);
 getIndustryLink(INDUSTRY_URL)
+	.then(value => {
+		console.log('test',value)
+	})
