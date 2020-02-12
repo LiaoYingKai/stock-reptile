@@ -64,21 +64,35 @@ function getIndustryLinks(industryLinks){
 	})
 }
 
-function getIndustry(url) {
-	request(url, function(err, res, body){
-		const $ = cheerio.load(body)
-		const tables = $('table')
-		$(tables).each(index,elem) {
-			const content = $(this)
-			console.log(content)
-		}
+function getIndustryId(url) {
+	return new Promise(function(resolve, reject){
+		request(url, function(err, res, body){
+			const $ = cheerio.load(body)
+			const tables = $('table')
+			const table = tables.eq(5).children('tbody').children('tr').children('td')
+			$(table).each(function(index,elem) {
+				const content = $(this).find('a').text()
+				const filterText = /[A-Za-z\&\#\;\~\@]/g;
+				const industryIds = []
+				content.replace(filterText,'').split("\n").forEach(item => {
+					const id = item.split('').map((item,index) => index > 3 ? '' : item ).join('')
+					if(!industryIds.includes(id) && id) {
+						industryIds.push(id)
+					}
+				})
+				console.log(industryIds)
+			})
+			// resolve(industryId)
+		})
 	})
 }
 
 // getStockInfo(STOCK_URl);
-// getIndustrySuffixLinks(INDUSTRY_URL)
-// 	.then(value => getIndustryLinks(value))
-// 	.then(value => {
-// 		console.log('test2', value)
-// 	})
-getIndustry()
+getIndustrySuffixLinks(INDUSTRY_URL)
+	.then(value => getIndustryLinks(value))
+	.then(value => {
+		value.map(url => {
+			getIndustryId(url)
+		})
+	})
+// getIndustryId(INDUSTRY_URL)
