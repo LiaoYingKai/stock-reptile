@@ -2,7 +2,7 @@ const request = require('request');
 const cheerio = require('cheerio');
 
 const STOCK_URl = 'https://tw.stock.yahoo.com/d/s/company_1101.html';
-const INDUSTRY_URL = 'https://tw.stock.yahoo.com/h/kimosel.php?tse=1&cat=%E6%B0%B4%E6%B3%A5&form=menu&form_id=stock_id&form_name=stock_name&domain=0';
+const COMPANY_URL = 'https://tw.stock.yahoo.com/h/kimosel.php?tse=1&cat=%E6%B0%B4%E6%B3%A5&form=menu&form_id=stock_id&form_name=stock_name&domain=0';
 const key = ['營業毛利率', '營業利益率', '稅前淨利率', '資產報酬率', '股東權益報酬率']
 function getStockInfo(url, callback) {
 	request(url, function(err, res, body) {
@@ -34,16 +34,15 @@ function getStockInfo(url, callback) {
 	})
 }
 
-function getIndustrySuffixLinks(url) {
+function getCompanySuffixLinks(url) {
 	return new Promise(function(resolve, reject){
 		request(url, function(err, res, body) {
 			const links = [];
-	
 			const $ = cheerio.load(body)
 			const tables = $('table')
 			const NO_USE_INDEX = [13, 30, 32]
-			const industryTable = tables.eq(4).children('tbody').children('tr').children('td')
-			$(industryTable).each(function(index, elem) {
+			const companyTable = tables.eq(4).children('tbody').children('tr').children('td')
+			$(companyTable).each(function(index, elem) {
 				const link = $(this).find('a').attr('href')
 				if(link) {
 					if(!NO_USE_INDEX.includes(index)) {
@@ -56,15 +55,15 @@ function getIndustrySuffixLinks(url) {
 	})
 }
 
-function getIndustryLinks(industryLinks){
+function getCompanyLinks(companyLinks){
 	return new Promise(function(resolve, reject) {
 		const PREFIX_URL = 'https://tw.stock.yahoo.com'
-		const links = industryLinks.map(link => `${PREFIX_URL}${link}`)
+		const links = companyLinks.map(link => `${PREFIX_URL}${link}`)
 		resolve(links)
 	})
 }
 
-function getIndustryId(url) {
+function getCompanyId(url) {
 	return new Promise(function(resolve, reject){
 		request(url, function(err, res, body){
 			const $ = cheerio.load(body)
@@ -73,26 +72,27 @@ function getIndustryId(url) {
 			$(table).each(function(index,elem) {
 				const content = $(this).find('a').text()
 				const filterText = /[A-Za-z\&\#\;\~\@]/g;
-				const industryIds = []
+				const companyIds = []
 				content.replace(filterText,'').split("\n").forEach(item => {
 					const id = item.split('').map((item,index) => index > 3 ? '' : item ).join('')
-					if(!industryIds.includes(id) && id) {
-						industryIds.push(id)
+					if(!companyIds.includes(id) && id) {
+						companyIds.push(id)
 					}
 				})
-				console.log(industryIds)
+				resolve(companyIds)
 			})
-			// resolve(industryId)
 		})
 	})
 }
 
 // getStockInfo(STOCK_URl);
-getIndustrySuffixLinks(INDUSTRY_URL)
-	.then(value => getIndustryLinks(value))
-	.then(value => {
-		value.map(url => {
-			getIndustryId(url)
+getCompanySuffixLinks(COMPANY_URL)
+	.then(suffixLink => getCompanyLinks(suffixLink))
+	.then(companyLink => {
+		companyLink.forEach(link => {
+			getCompanyId(link)
+			.then(value => {
+				console.log(value)
+			})
 		})
 	})
-// getIndustryId(INDUSTRY_URL)
