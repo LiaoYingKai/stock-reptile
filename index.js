@@ -97,4 +97,10 @@ getCompanySuffixLinks(COMPANY_URL)
 		})
 		return await Promise.all(ids)
 	})
+	.then(ids => ids.reduce((array, currentValue) => [...array, ...currentValue], []))
+	.then(ids => ids.filter(item => {
+		if(!Number.isNaN(Number(item))) {
+			return item
+		}
+	}))
 	.then(ids => console.log(ids))
