@@ -1,9 +1,12 @@
 const request = require('request');
 const cheerio = require('cheerio');
 
-const STOCK_URl = 'https://tw.stock.yahoo.com/d/s/company_1101.html';
+// const STOCK_URl = 'https://tw.stock.yahoo.com/d/s/company_1101.html';
 const COMPANY_URL = 'https://tw.stock.yahoo.com/h/kimosel.php?tse=1&cat=%E6%B0%B4%E6%B3%A5&form=menu&form_id=stock_id&form_name=stock_name&domain=0';
 const key = ['營業毛利率', '營業利益率', '稅前淨利率', '資產報酬率', '股東權益報酬率']
+function getStockLink(company) {
+	return `https://tw.stock.yahoo.com/d/s/company_${company}.html`;
+}
 function getStockInfo(url, callback) {
 	request(url, function(err, res, body) {
 		const $ = cheerio.load(body)
@@ -56,43 +59,42 @@ function getCompanySuffixLinks(url) {
 }
 
 function getCompanyLinks(companyLinks){
-	return new Promise(function(resolve, reject) {
-		const PREFIX_URL = 'https://tw.stock.yahoo.com'
-		const links = companyLinks.map(link => `${PREFIX_URL}${link}`)
-		resolve(links)
-	})
+	const PREFIX_URL = 'https://tw.stock.yahoo.com'
+	const links = companyLinks.map(link => `${PREFIX_URL}${link}`)
+	return links;
 }
 
-function getCompanyId(url) {
+async function getCompanyId(url) {
 	return new Promise(function(resolve, reject){
 		request(url, function(err, res, body){
 			const $ = cheerio.load(body)
 			const tables = $('table')
 			const table = tables.eq(5).children('tbody').children('tr').children('td')
+			const companyIds = []
 			$(table).each(function(index,elem) {
 				const content = $(this).find('a').text()
 				const filterText = /[A-Za-z\&\#\;\~\@]/g;
-				const companyIds = []
 				content.replace(filterText,'').split("\n").forEach(item => {
 					const id = item.split('').map((item,index) => index > 3 ? '' : item ).join('')
 					if(!companyIds.includes(id) && id) {
 						companyIds.push(id)
 					}
 				})
-				resolve(companyIds)
 			})
+			resolve(companyIds)
 		})
 	})
 }
 
-// getStockInfo(STOCK_URl);
 getCompanySuffixLinks(COMPANY_URL)
 	.then(suffixLink => getCompanyLinks(suffixLink))
-	.then(companyLink => {
-		companyLink.forEach(link => {
-			getCompanyId(link)
-			.then(value => {
-				console.log(value)
-			})
+	.then(async (companyLinks) => {
+		const ids = companyLinks.map(async (link) => {
+			return await getCompanyId(link)
+				.then((ids) => {
+					return ids
+				})
 		})
+		return await Promise.all(ids)
 	})
+	.then(ids => console.log(ids))
