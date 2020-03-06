@@ -111,7 +111,8 @@ getCompanySuffixLinks(COMPANY_URL)
 		const companys = [];
 		for(let i=0 ; i <= stockLinks.length ; i++ ) {
 			const company = await getStockInfo(stockLinks[i])
-			const isEligible = Object.values(company.epsOfYears).every(eps => Number(eps) > 1.5)
+			const epses = Object.values(company.epsOfYears)
+			const isEligible = epses.every(eps => Number(eps) > 1.5) && epses.length > 0
 			if (isEligible) {
 				companys.push(company)
 				console.log(company)
