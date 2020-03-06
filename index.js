@@ -7,33 +7,38 @@ const key = ['營業毛利率', '營業利益率', '稅前淨利率', '資產報
 function getStockLink(company) {
 	return `https://tw.stock.yahoo.com/d/s/company_${company}.html`;
 }
-function getStockInfo(url, callback) {
-	request(url, function(err, res, body) {
-		const $ = cheerio.load(body)
-		const tables = $('table')
-		const financialStatement = tables.eq(3).children('tbody').children('tr').slice(1)
-		const data = {
-			profitability: {},
-			epsOfSeasons: {},
-			epsOfYears: {},
-			eps: 0,
-		};
-		$(financialStatement).each(function(index, elem) {
-			const content = $(this).children('td');
-			const filterText = /[A-Za-z\&\#\;\~\@]/g;
-			data.profitability[key[index]] = content.eq(1).text()
-			if( index != 4) {
-				const seasonNum = content.eq(2).html().replace(filterText,'')
-				const seasonText = `${seasonNum.slice(0,3)}年 第${seasonNum.slice(3)}季`
-				data.epsOfSeasons[seasonText] = content.eq(3).html().replace(filterText,'') + "元"
-				const yearText = content.eq(4).html().replace(filterText,'') + "年"
-				data.epsOfYears[yearText] = content.eq(5).html().replace(filterText,'') + "元"
-			} else {
-				console.log(content.eq(2).html())
-				data.eps = content.eq(2).html().replace(filterText,'').replace('472: ', '') + "元"
-			}
-		});
-		console.log(data)
+function getStockInfo(url ) {
+	return new Promise(function(resolve, reject){
+		request(url, function(err, res, body) {
+			const $ = cheerio.load(body)
+			const tables = $('table')
+			const financialStatement = tables.eq(3).children('tbody').children('tr').slice(1)
+			const companyInfo = {
+				url,
+				profitability: {},
+				epsOfSeasons: {},
+				epsOfYears: {},
+				eps: 0,
+			};
+			const companys = [];
+			$(financialStatement).each(function(index, elem) {
+				const content = $(this).children('td');
+				const filterText = /[A-Za-z\&\#\;\~\@]/g;
+				companyInfo.profitability[key[index]] = content.eq(1).text()
+				if( index != 4) {
+					const seasonNum = content.eq(2).html().replace(filterText,'')
+					const seasonText = `${seasonNum.slice(0,3)}年 第${seasonNum.slice(3)}季`
+					const seasonEps = content.eq(3).html().replace(filterText,'')
+					companyInfo.epsOfSeasons[seasonText] = seasonEps
+					const yearText = content.eq(4).html().replace(filterText,'') + "年"
+					const yearEps = content.eq(5).html().replace(filterText,'')
+					companyInfo.epsOfYears[yearText] = yearEps
+				} else {
+					companyInfo.eps = content.eq(2).html().replace(filterText,'').replace('472: ', '') + "元"
+				}
+			});
+			resolve(companyInfo)
+		})
 	})
 }
 
@@ -91,9 +96,7 @@ getCompanySuffixLinks(COMPANY_URL)
 	.then(async (companyLinks) => {
 		const ids = companyLinks.map(async (link) => {
 			return await getCompanyId(link)
-				.then((ids) => {
-					return ids
-				})
+				.then(ids => ids)
 		})
 		return await Promise.all(ids)
 	})
@@ -103,4 +106,16 @@ getCompanySuffixLinks(COMPANY_URL)
 			return item
 		}
 	}))
-	.then(ids => console.log(ids))
+	.then(ids => ids.map(id => getStockLink(id)))
+	.then(async (stockLinks) => {
+		const companys = [];
+		for(let i=0 ; i <= stockLinks.length ; i++ ) {
+			const company = await getStockInfo(stockLinks[i])
+			const isEligible = Object.values(company.epsOfYears).every(eps => Number(eps) > 1.5)
+			if (isEligible) {
+				companys.push(company)
+				console.log(company)
+			}
+		}
+		console.log(companys)
+	})
